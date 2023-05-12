@@ -18,20 +18,16 @@ _PRECISION = 1e-3
 
 
 def gen_float_vectors(num, dim):
-    vec_list = [[random.random() for _ in range(dim)] for _ in range(num)]
-    return vec_list
+    return [[random.random() for _ in range(dim)] for _ in range(num)]
 
 
 def gen_binary_vectors(num, dim):
-    zero_fill = 0
-    if dim % 8 > 0:
-        zero_fill = 8 - dim % 8
+    zero_fill = 8 - dim % 8 if dim % 8 > 0 else 0
     binary_vectors = []
     raw_vectors = []
-    for i in range(num):
-        raw_vector = [random.randint(0, 1) for i in range(dim)]
-        for k in range(zero_fill):
-            raw_vector.append(0)
+    for _ in range(num):
+        raw_vector = [random.randint(0, 1) for _ in range(dim)]
+        raw_vector.extend(0 for _ in range(zero_fill))
         raw_vectors.append(raw_vector)
         binary_vectors.append(bytes(np.packbits(raw_vector, axis=-1).tolist()))
     return binary_vectors, raw_vectors

@@ -73,7 +73,7 @@ class CollectionSchema:
         return json.dumps(self.to_dict())
 
     def __str__(self):
-        return str(json.dumps(self.to_dict()))
+        return json.dumps(self.to_dict())
 
     def __len__(self):
         return len(self.fields)
@@ -147,12 +147,11 @@ class CollectionSchema:
         return self._auto_id
 
     def to_dict(self):
-        _dict = {
+        return {
             "auto_id": self.auto_id,
             "description": self._description,
-            "fields": [f.to_dict() for f in self._fields]
+            "fields": [f.to_dict() for f in self._fields],
         }
-        return _dict
 
 
 class FieldSchema:
@@ -191,28 +190,27 @@ class FieldSchema:
             return
         if not self._kwargs:
             return
-        # currently only support ndim
-        if self._kwargs:
-            for k in VECTOR_COMMON_TYPE_PARAMS:
-                if k in self._kwargs:
-                    if self._type_params is None:
-                        self._type_params = {}
-                    self._type_params[k] = self._kwargs[k]
+        for k in VECTOR_COMMON_TYPE_PARAMS:
+            if k in self._kwargs:
+                if self._type_params is None:
+                    self._type_params = {}
+                self._type_params[k] = self._kwargs[k]
 
     @classmethod
     def construct_from_dict(cls, raw):
         kwargs = {}
-        kwargs.update(raw.get("params", {}))
+        kwargs |= raw.get("params", {})
         kwargs['is_primary'] = raw.get("is_primary", False)
         if raw.get("auto_id", None) is not None:
             kwargs['auto_id'] = raw.get("auto_id", None)
         return FieldSchema(raw['name'], raw['type'], raw['description'], **kwargs)
 
     def to_dict(self):
-        _dict = dict()
-        _dict["name"] = self.name
-        _dict["description"] = self._description
-        _dict["type"] = self.dtype
+        _dict = {
+            "name": self.name,
+            "description": self._description,
+            "type": self.dtype,
+        }
         if self._type_params:
             _dict["params"] = copy.deepcopy(self.params)
         if self.is_primary:
@@ -302,11 +300,11 @@ def parse_fields_from_dataframe(dataframe) -> List[FieldSchema]:
             if dtype == DataType.UNKNOWN:
                 new_dtype = infer_dtype_bydata(values[i])
                 if new_dtype in (DataType.BINARY_VECTOR, DataType.FLOAT_VECTOR):
-                    vector_type_params = {}
-                    if new_dtype == DataType.BINARY_VECTOR:
-                        vector_type_params['dim'] = len(values[i]) * 8
-                    else:
-                        vector_type_params['dim'] = len(values[i])
+                    vector_type_params = {
+                        'dim': len(values[i]) * 8
+                        if new_dtype == DataType.BINARY_VECTOR
+                        else len(values[i])
+                    }
                     column_params_map[col_names[i]] = vector_type_params
                 data_types[i] = new_dtype
 

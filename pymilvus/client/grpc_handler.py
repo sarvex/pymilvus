@@ -73,11 +73,6 @@ def error_handler(*rargs):
                 LOGGER.error(
                     "\nAddr [{}] {}\nRPC error: {}\n\t{}".format(self.server_address, func.__name__, e, record_dict))
                 raise e
-            except Exception as e:
-                record_dict["Exception"] = str(datetime.datetime.now())
-                LOGGER.error("\nAddr [{}] {}\nExcepted error: {}\n\t{}".format(self.server_address, func.__name__, e,
-                                                                               record_dict))
-                raise e
 
         return handler
 
@@ -106,7 +101,7 @@ def set_uri(host, port, uri):
             _host = _uri.hostname
             _port = _uri.port
         except (AttributeError, ValueError, TypeError) as e:
-            raise ParamError("uri is illegal: {}".format(e))
+            raise ParamError(f"uri is illegal: {e}")
     else:
         raise ParamError("Param is not complete. Please invoke as follow:\n"
                          "\t(host = ${HOST}, port = ${PORT})\n"
@@ -115,7 +110,7 @@ def set_uri(host, port, uri):
     if not is_legal_host(_host) or not is_legal_port(_port):
         raise ParamError("host or port is illeagl")
 
-    return "{}:{}".format(str(_host), str(_port))
+    return f"{str(_host)}:{str(_port)}"
 
 
 class RegistryHandler:
@@ -143,7 +138,7 @@ class RegistryHandler:
     def __str__(self):
         attr_list = ['%s=%r' % (key, value)
                      for key, value in self.__dict__.items() if not key.startswith('_')]
-        return '<Milvus: {}>'.format(', '.join(attr_list))
+        return f"<Milvus: {', '.join(attr_list)}>"
 
     def __enter__(self):
         return self
@@ -193,21 +188,23 @@ class RegistryHandler:
                     return True
                 except Exception:
                     retry -= 1
-                    LOGGER.debug("Retry connect addr <{}> {} times".format(self._uri, self._max_retry - retry))
+                    LOGGER.debug(
+                        f"Retry connect addr <{self._uri}> {self._max_retry - retry} times"
+                    )
                     if retry > 0:
                         timeout *= 2
                         continue
                     else:
-                        LOGGER.error("Retry to connect server {} failed.".format(self._uri))
+                        LOGGER.error(f"Retry to connect server {self._uri} failed.")
                         raise
         except grpc.FutureTimeoutError:
-            raise NotConnectError('Fail connecting to server on {}. Timeout'.format(self._uri))
+            raise NotConnectError(f'Fail connecting to server on {self._uri}. Timeout')
         except grpc.RpcError as e:
-            raise NotConnectError("Connect error: <{}>".format(e))
-        # Unexpected error
+            raise NotConnectError(f"Connect error: <{e}>")
         except Exception as e:
-            raise NotConnectError("Error occurred when trying to connect server:\n"
-                                  "\t<{}>".format(str(e)))
+            raise NotConnectError(
+                f"Error occurred when trying to connect server:\n\t<{str(e)}>"
+            )
 
     @property
     def server_address(self):
@@ -253,7 +250,7 @@ class GrpcHandler:
     def __str__(self):
         attr_list = ['%s=%r' % (key, value)
                      for key, value in self.__dict__.items() if not key.startswith('_')]
-        return '<Milvus: {}>'.format(', '.join(attr_list))
+        return f"<Milvus: {', '.join(attr_list)}>"
 
     def __enter__(self):
         return self
@@ -304,21 +301,23 @@ class GrpcHandler:
                     return True
                 except Exception:
                     retry -= 1
-                    LOGGER.debug("Retry connect addr <{}> {} times".format(self._uri, self._max_retry - retry))
+                    LOGGER.debug(
+                        f"Retry connect addr <{self._uri}> {self._max_retry - retry} times"
+                    )
                     if retry > 0:
                         timeout *= 2
                         continue
                     else:
-                        LOGGER.error("Retry to connect server {} failed.".format(self._uri))
+                        LOGGER.error(f"Retry to connect server {self._uri} failed.")
                         raise
         except grpc.FutureTimeoutError:
-            raise NotConnectError('Fail connecting to server on {}. Timeout'.format(self._uri))
+            raise NotConnectError(f'Fail connecting to server on {self._uri}. Timeout')
         except grpc.RpcError as e:
-            raise NotConnectError("Connect error: <{}>".format(e))
-        # Unexpected error
+            raise NotConnectError(f"Connect error: <{e}>")
         except Exception as e:
-            raise NotConnectError("Error occurred when trying to connect server:\n"
-                                  "\t<{}>".format(str(e)))
+            raise NotConnectError(
+                f"Error occurred when trying to connect server:\n\t<{str(e)}>"
+            )
 
     @property
     def server_address(self):
@@ -390,10 +389,10 @@ class GrpcHandler:
         request = Prepare.show_collections_request()
         rf = self._stub.ShowCollections.future(request, wait_for_ready=True, timeout=timeout)
         response = rf.result()
-        status = response.status
         if response.status.error_code == 0:
             # return Status(status.error_code, status.reason), [name for name in response.values if len(name) > 0]
             return list(response.collection_names)
+        status = response.status
         raise BaseException(status.error_code, status.reason)
 
     @error_handler()
@@ -437,10 +436,7 @@ class GrpcHandler:
         status = response.status
         if status.error_code == 0:
             statistics = response.statistics
-            info_dict = dict()
-            for kv in statistics:
-                info_dict[kv.key] = kv.value
-            return info_dict
+            return {kv.key: kv.value for kv in statistics}
         raise BaseException(status.error_code, status.reason)
 
     @error_handler([])
@@ -476,17 +472,20 @@ class GrpcHandler:
 
         collection_schema = self.describe_collection(collection_name, timeout=timeout, **kwargs)
 
-        fields_name = list()
-        for i in range(len(entities)):
-            if "name" in entities[i]:
-                fields_name.append(entities[i]["name"])
-
+        fields_name = [
+            entities[i]["name"]
+            for i in range(len(entities))
+            if "name" in entities[i]
+        ]
         fields_info = collection_schema["fields"]
 
-        request = insert_param if insert_param \
-            else Prepare.bulk_insert_param(collection_name, entities, partition_name, fields_info)
-
-        return request
+        return (
+            insert_param
+            if insert_param
+            else Prepare.bulk_insert_param(
+                collection_name, entities, partition_name, fields_info
+            )
+        )
 
     @error_handler([])
     def bulk_insert(self, collection_name, entities, partition_name=None, timeout=None, **kwargs):
@@ -515,13 +514,6 @@ class GrpcHandler:
             # once delete api is finished, remove this error
             raise NotImplementedError("Delete function is not implemented")
 
-            future = self._stub.Delete.future(req, wait_for_ready=True, timeout=timeout)
-
-            response = future.result()
-            if response.status.error_code == 0:
-                return MutationResult(response)
-
-            raise BaseException(response.status.error_code, response.status.reason)
         except Exception as err:
             if kwargs.get("_async", False):
                 return MutationFuture(None, None, err)
@@ -652,7 +644,7 @@ class GrpcHandler:
             if len(persistent_segment_ids) != len(query_segment_ids):
                 return False
 
-            if len(query_segment_ids) == 0:
+            if not query_segment_ids:
                 return True
 
             query_segment_ids.sort()
@@ -701,16 +693,23 @@ class GrpcHandler:
         for fields in collection_desc["fields"]:
             if field_name != fields["name"]:
                 continue
-            if fields["type"] != DataType.FLOAT_VECTOR and fields["type"] != DataType.BINARY_VECTOR:
+            if fields["type"] not in [
+                DataType.FLOAT_VECTOR,
+                DataType.BINARY_VECTOR,
+            ]:
                 # TODO: add new error type
-                raise BaseException(Status.UNEXPECTED_ERROR,
-                                    "cannot create index on non-vector field: " + str(field_name))
+                raise BaseException(
+                    Status.UNEXPECTED_ERROR,
+                    f"cannot create index on non-vector field: {str(field_name)}",
+                )
             valid_field = True
             break
         if not valid_field:
             # TODO: add new error type
-            raise BaseException(Status.UNEXPECTED_ERROR,
-                                "cannot create index on non-existed field: " + str(field_name))
+            raise BaseException(
+                Status.UNEXPECTED_ERROR,
+                f"cannot create index on non-existed field: {str(field_name)}",
+            )
         index_type = params["index_type"].upper()
         if index_type == "FLAT":
             try:
@@ -810,9 +809,8 @@ class GrpcHandler:
             if state == IndexState.Failed:
                 return False, fail_reason
             end = time.time()
-            if timeout is not None:
-                if end - start > timeout:
-                    raise BaseException(1, "CreateIndex Timeout")
+            if timeout is not None and end - start > timeout:
+                raise BaseException(1, "CreateIndex Timeout")
 
     @error_handler()
     def load_collection(self, db_name, collection_name, timeout=None, **kwargs):
@@ -850,7 +848,7 @@ class GrpcHandler:
         unloaded_segments = {info.segmentID: info.num_rows for info in
                              self.get_persistent_segment_infos(collection_name, timeout)}
 
-        while len(unloaded_segments) > 0:
+        while unloaded_segments:
             time.sleep(0.5)
 
             for info in self.get_query_segment_infos(collection_name, timeout):
@@ -940,7 +938,7 @@ class GrpcHandler:
                              self.get_persistent_segment_infos(collection_name, timeout)
                              if info.partitionID in pIDs}
 
-        while len(unloaded_segments) > 0:
+        while unloaded_segments:
             time.sleep(0.5)
 
             for info in self.get_query_segment_infos(collection_name, timeout):
@@ -968,16 +966,14 @@ class GrpcHandler:
                 raise BaseException(ErrorCode.UnexpectedError,
                                     f"len(partition_names) ({ol}) != len(inMemory_percentages) ({pl})")
 
-            loaded_histogram = dict()
-            for i, par_name in enumerate(response.partition_names):
-                loaded_histogram[par_name] = response.inMemory_percentages[i]
-
-            ok = True
-            for par_name in partition_names:
-                if loaded_histogram.get(par_name, 0) != 100:
-                    ok = False
-                    break
-
+            loaded_histogram = {
+                par_name: response.inMemory_percentages[i]
+                for i, par_name in enumerate(response.partition_names)
+            }
+            ok = all(
+                loaded_histogram.get(par_name, 0) == 100
+                for par_name in partition_names
+            )
             if ok:
                 return
 
@@ -1004,8 +1000,8 @@ class GrpcHandler:
 
         # all partition names must be valid, otherwise throw exception
         for name in partition_names:
-            if not name in pNames:
-                msg = "partitionID of partitionName:" + name + " can not be found"
+            if name not in pNames:
+                msg = f"partitionID of partitionName:{name} can not be found"
                 raise BaseException(1, msg)
 
         total_segments_nums = sum(info.num_rows for info in
@@ -1133,7 +1129,7 @@ class GrpcHandler:
         future = self._stub.Query.future(request, wait_for_ready=True, timeout=timeout)
         response = future.result()
         if response.status.error_code == Status.EMPTY_COLLECTION:
-            return list()
+            return []
         if response.status.error_code != Status.SUCCESS:
             raise BaseException(response.status.error_code, response.status.reason)
 
@@ -1145,13 +1141,13 @@ class GrpcHandler:
         # check if all lists are of the same length
         it = iter(response.fields_data)
         num_entities = len_of(next(it))
-        if not all(len_of(field_data) == num_entities for field_data in it):
+        if any(len_of(field_data) != num_entities for field_data in it):
             raise BaseException(0, "The length of fields data is inconsistent")
 
         # transpose
-        results = list()
+        results = []
         for index in range(0, num_entities):
-            result = dict()
+            result = {}
             for field_data in response.fields_data:
                 if field_data.type == DataType.BOOL:
                     raise BaseException(0, "Not support bool yet")
@@ -1200,7 +1196,8 @@ class GrpcHandler:
             return response.int_dist.data
         elif len(response.float_dist.data) > 0:
             def is_l2(val):
-                return val == "L2" or val == "l2"
+                return val in ["L2", "l2"]
+
             if is_l2(params["metric"]) and "sqrt" in params.keys() and params["sqrt"] is True:
                 for i in range(len(response.float_dist.data)):
                     response.float_dist.data[i] = math.sqrt(response.float_dist.data[i])

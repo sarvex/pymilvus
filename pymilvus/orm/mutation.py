@@ -13,7 +13,7 @@
 class MutationResult:
     def __init__(self, mr):
         self._mr = mr
-        self._primary_keys = list()
+        self._primary_keys = []
         self._insert_cnt = 0
         self._delete_cnt = 0
         self._upsert_cnt = 0
@@ -47,8 +47,7 @@ class MutationResult:
         :return str:
             The information of mutation result.
         """
-        return "(insert count: {}, delete count: {}, upsert count: {}, timestamp: {})".\
-            format(self._insert_cnt, self._delete_cnt, self._upsert_cnt, self._timestamp)
+        return f"(insert count: {self._insert_cnt}, delete count: {self._delete_cnt}, upsert count: {self._upsert_cnt}, timestamp: {self._timestamp})"
 
     __repr__ = __str__
 

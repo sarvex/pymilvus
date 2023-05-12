@@ -46,9 +46,9 @@ def hello_milvus():
     vectors = [[random.random() for _ in range(dim)] for _ in range(nb)]
     collection.insert(
         [
-            [i for i in range(nb)],
+            list(range(nb)),
             [float(random.randrange(-20, -10)) for _ in range(nb)],
-            vectors
+            vectors,
         ]
     )
 

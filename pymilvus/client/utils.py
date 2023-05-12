@@ -49,15 +49,14 @@ def check_invalid_binary_vector(entities):
         if entity['type'] == DataType.BINARY_VECTOR:
             if not isinstance(entity['values'], list) and len(entity['values']) == 0:
                 return False
-            else:
-                dim = len(entity['values'][0]) * 8
-                if dim == 0:
+            dim = len(entity['values'][0]) * 8
+            if dim == 0:
+                return False
+            for values in entity['values']:
+                if len(values) * 8 != dim:
                     return False
-                for values in entity['values']:
-                    if len(values) * 8 != dim:
-                        return False
-                    if not isinstance(values, bytes):
-                        return False
+                if not isinstance(values, bytes):
+                    return False
     return True
 
 
@@ -164,12 +163,10 @@ def len_of(field_data) -> int:
             raise BaseException("Unsupported scalar type")
     elif field_data.HasField("vectors"):
         dim = field_data.vectors.dim
-        if field_data.vectors.HasField("float_vector"):
-            total_len = len(field_data.vectors.float_vector.data)
-            if total_len % dim != 0:
-                raise BaseException(f"Invalid vector length: total_len={total_len}, dim={dim}")
-            return int(total_len / dim)
-        else:
-            total_len = len(field_data.vectors.binary_vector)
-            return int(total_len / (dim / 8))
+        if not field_data.vectors.HasField("float_vector"):
+            return int(len(field_data.vectors.binary_vector) / (dim / 8))
+        total_len = len(field_data.vectors.float_vector.data)
+        if total_len % dim != 0:
+            raise BaseException(f"Invalid vector length: total_len={total_len}, dim={dim}")
+        return int(total_len / dim)
     raise BaseException("Unknown data type")

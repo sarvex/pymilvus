@@ -1,16 +1,19 @@
 import logging.config
 
 
+
+
 class DefaultConfig:
     GRPC_PORT = "19530"
     GRPC_ADDRESS = "127.0.0.1:19530"
-    GRPC_URI = "tcp://{}".format(GRPC_ADDRESS)
+    GRPC_URI = f"tcp://{GRPC_ADDRESS}"
 
     HTTP_PORT = "19121"
     HTTP_ADDRESS = "127.0.0.1:19121"
-    HTTP_URI = "http://{}".format(HTTP_ADDRESS)
+    HTTP_URI = f"http://{HTTP_ADDRESS}"
 
     CALC_DIST_METRIC = "L2"
+
 
 # logging
 COLORS = {

@@ -37,12 +37,12 @@ class SingleInstanceMetaClass(type):
     def __init__(cls, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def __call__(cls, *args, **kwargs):
-        if cls.instance:
-            return cls.instance
-        cls.instance = cls.__new__(cls)
-        cls.instance.__init__(*args, **kwargs)
-        return cls.instance
+    def __call__(self, *args, **kwargs):
+        if self.instance:
+            return self.instance
+        self.instance = self.__new__(self)
+        self.instance.__init__(*args, **kwargs)
+        return self.instance
 
     @synchronized
     def __new__(cls, *args, **kwargs):
@@ -77,9 +77,10 @@ class Connections(metaclass=SingleInstanceMetaClass):
         The above example creates two milvus connections named default and dev.
         """
         for k in kwargs:
-            if k in self._conns:
-                if self._kwargs.get(k, None) != kwargs.get(k, None):
-                    raise ConnectionConfigException(0, ExceptionsMessage.ConnDiffConf % k)
+            if k in self._conns and self._kwargs.get(k, None) != kwargs.get(
+                k, None
+            ):
+                raise ConnectionConfigException(0, ExceptionsMessage.ConnDiffConf % k)
             if "host" not in kwargs.get(k, {}) or "port" not in kwargs.get(k, {}):
                 raise ConnectionConfigException(0, ExceptionsMessage.NoHostPort)
 
@@ -146,13 +147,14 @@ class Connections(metaclass=SingleInstanceMetaClass):
             handler = tmp_kwargs.pop("handler", DefaultConfig.DEFAULT_HANDLER)
             pool = tmp_kwargs.pop("pool", DefaultConfig.DEFAULT_POOL)
             return Milvus(tmp_host, tmp_port, handler, pool, **tmp_kwargs)
+
         if alias in self._conns:
-            if len(kwargs) > 0 and self._kwargs[alias] != kwargs:
+            if kwargs and self._kwargs[alias] != kwargs:
                 raise ConnectionConfigException(0, ExceptionsMessage.ConnDiffConf % alias)
             return self._conns[alias]
 
         if alias in self._kwargs:
-            if len(kwargs) > 0:
+            if kwargs:
                 if "host" not in kwargs or "port" not in kwargs:
                     raise ConnectionConfigException(0, ExceptionsMessage.NoHostPort)
                 conn = connect_milvus(**kwargs)
@@ -163,7 +165,7 @@ class Connections(metaclass=SingleInstanceMetaClass):
             self._conns[alias] = conn
             return conn
 
-        if len(kwargs) > 0:
+        if kwargs:
             if "host" not in kwargs or "port" not in kwargs:
                 raise ConnectionConfigException(0, ExceptionsMessage.NoHostPort)
             conn = connect_milvus(**kwargs)

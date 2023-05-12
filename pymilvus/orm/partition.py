@@ -404,9 +404,7 @@ class Partition:
         conn = self._get_connection()
         res = conn.search_with_expression(self._collection.name, data, anns_field, param, limit,
                                           expr, [self._name], output_fields, timeout, round_decimal, **kwargs)
-        if kwargs.get("_async", False):
-            return SearchFuture(res)
-        return SearchResult(res)
+        return SearchFuture(res) if kwargs.get("_async", False) else SearchResult(res)
 
     def query(self, expr, output_fields=None, timeout=None):
         """
@@ -460,5 +458,6 @@ class Partition:
             - Query results: [{'film_id': 0, 'film_date': 2000}, {'film_id': 1, 'film_date': 2001}]
         """
         conn = self._get_connection()
-        res = conn.query(self._collection.name, expr, output_fields, [self._name], timeout)
-        return res
+        return conn.query(
+            self._collection.name, expr, output_fields, [self._name], timeout
+        )

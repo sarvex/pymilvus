@@ -55,9 +55,11 @@ class Prepare:
         primary_field = None
         auto_id_field = None
         for fk, fv in fields.items():
-            if fk != 'fields':
-                if fk == 'description':
-                    schema.description = fv
+            if fk == 'description':
+                schema.description = fv
+                continue
+
+            elif fk != 'fields':
                 continue
 
             for field in fv:
@@ -106,7 +108,7 @@ class Prepare:
                             try:
                                 int(tv)
                             except (TypeError, ValueError):
-                                raise ParamError("invalid dim: " + str(tv)) from None
+                                raise ParamError(f"invalid dim: {str(tv)}") from None
                         kv_pair = common_types.KeyValuePair(key=str(tk), value=str(tv))
                         field_schema.type_params.append(kv_pair)
 

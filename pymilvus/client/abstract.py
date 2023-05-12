@@ -25,11 +25,7 @@ class LoopBase(object):
             _end = min(item.stop, self.__len__()) if item.stop else self.__len__()
             _step = item.step or 1
 
-            elements = []
-            for i in range(_start, _end, _step):
-                elements.append(self.get__item(i))
-            return elements
-
+            return [self.get__item(i) for i in range(_start, _end, _step)]
         if item >= self.__len__():
             raise IndexError("Index out of range")
 
@@ -57,8 +53,7 @@ class LoopCache(object):
         self._array = []
 
     def fill(self, index, obj):
-        if len(self._array) + 1 < index:
-            pass
+        pass
 
 
 class FieldSchema:
@@ -72,8 +67,8 @@ class FieldSchema:
         self.description = None
         self.auto_id = False
         self.type = DataType.UNKNOWN
-        self.indexes = list()
-        self.params = dict()
+        self.indexes = []
+        self.params = {}
 
         ##
         self.__pack(self._raw)
@@ -93,10 +88,10 @@ class FieldSchema:
                 self.params[type_param.key] = json.loads(type_param.value)
             else:
                 self.params[type_param.key] = type_param.value
-                if "dim" == type_param.key:
+                if type_param.key == "dim":
                     self.params[type_param.key] = int(type_param.value)
 
-        index_dict = dict()
+        index_dict = {}
         for index_param in raw.index_params:
             if index_param.key == "params":
                 import json
@@ -107,15 +102,15 @@ class FieldSchema:
         self.indexes.extend([index_dict])
 
     def dict(self):
-        _dict = dict()
-        _dict["field_id"] = self.field_id
-        _dict["name"] = self.name
-        _dict["description"] = self.description
-        _dict["type"] = self.type
-        _dict["params"] = self.params or dict()
-        _dict["is_primary"] = self.is_primary
-        _dict["auto_id"] = self.auto_id
-        return _dict
+        return {
+            "field_id": self.field_id,
+            "name": self.name,
+            "description": self.description,
+            "type": self.type,
+            "params": self.params or {},
+            "is_primary": self.is_primary,
+            "auto_id": self.auto_id,
+        }
 
 
 class CollectionSchema:
@@ -125,9 +120,9 @@ class CollectionSchema:
         #
         self.collection_name = None
         self.description = None
-        self.params = dict()
-        self.fields = list()
-        self.statistics = dict()
+        self.params = {}
+        self.fields = []
+        self.statistics = {}
         self.auto_id = False  # auto_id is not in collection level any more later
         self.aliases = []
 
@@ -154,12 +149,13 @@ class CollectionSchema:
 
     def dict(self):
         if not self._raw:
-            return dict()
-        _dict = dict()
-        _dict["collection_name"] = self.collection_name
-        _dict["auto_id"] = self.auto_id
-        _dict["description"] = self.description
-        _dict["fields"] = [f.dict() for f in self.fields]
+            return {}
+        _dict = {
+            "collection_name": self.collection_name,
+            "auto_id": self.auto_id,
+            "description": self.description,
+            "fields": [f.dict() for f in self.fields],
+        }
         _dict["aliases"] = self.aliases
         # for k, v in self.params.items():
         #     if isinstance(v, DataType):
@@ -178,8 +174,7 @@ class Entity:
         self._distance = entity_score
 
     def __str__(self):
-        str_ = 'id: {}, distance: {}, entity: {},'.format(self._id, self._distance, self._row_data)
-        return str_
+        return f'id: {self._id}, distance: {self._distance}, entity: {self._row_data},'
 
     def __getattr__(self, item):
         return self.value_of_field(item)
@@ -190,10 +185,7 @@ class Entity:
 
     @property
     def fields(self):
-        fields = []
-        for k, v in self._row_data.items():
-            fields.append(k)
-        return fields
+        return [k for k, v in self._row_data.items()]
 
     def get(self, field):
         return self.value_of_field(field)
@@ -202,7 +194,7 @@ class Entity:
         if field in self._row_data:
             return self._row_data[field]
         else:
-            raise BaseException(0, "Field {} is not in return entity".format(field))
+            raise BaseException(0, f"Field {field} is not in return entity")
 
     def type_of_field(self, field):
         raise NotImplementedError('TODO: support field in Hits')
@@ -216,7 +208,7 @@ class Hit:
         self._distance = entity_score
 
     def __str__(self):
-        return "(distance: {}, score: {}, id: {})".format(self._distance, self._score, self._id)
+        return f"(distance: {self._distance}, score: {self._score}, id: {self._id})"
 
     @property
     def entity(self):
@@ -248,14 +240,14 @@ class Hits(LoopBase):
         self._pack(self._raw)
 
     def _pack(self, raw):
-        self._entities = [item for item in self]
+        self._entities = list(self)
 
     def __len__(self):
         return len(self._raw.ids.int_id.data)
 
     def get__item(self, item):
         entity_id = self._raw.ids.int_id.data[item]
-        entity_row_data = dict()
+        entity_row_data = {}
         if self._raw.fields_data:
             for field_data in self._raw.fields_data:
                 if field_data.type == DataType.BOOL:
@@ -306,7 +298,7 @@ class Hits(LoopBase):
 class MutationResult:
     def __init__(self, raw):
         self._raw = raw
-        self._primary_keys = list()
+        self._primary_keys = []
         self._insert_cnt = 0
         self._delete_cnt = 0
         self._upsert_cnt = 0

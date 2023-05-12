@@ -33,13 +33,11 @@ class Prepare:
                         raise DataNotMatchException(0, ExceptionsMessage.FieldsNumInconsistent)
                     if not data[schema.primary_field.name].isnull().all():
                         raise DataNotMatchException(0, ExceptionsMessage.AutoIDWithData)
-                else:
-                    if len(fields) != len(data.columns)+1:
-                        raise DataNotMatchException(0, ExceptionsMessage.FieldsNumInconsistent)
-            else:
-                if len(fields) != len(data.columns):
+                elif len(fields) != len(data.columns)+1:
                     raise DataNotMatchException(0, ExceptionsMessage.FieldsNumInconsistent)
-            for i, field in enumerate(fields):
+            elif len(fields) != len(data.columns):
+                raise DataNotMatchException(0, ExceptionsMessage.FieldsNumInconsistent)
+            for field in fields:
                 if field.is_primary and field.auto_id:
                     continue
                 entities.append({"name": field.name,
@@ -47,9 +45,8 @@ class Prepare:
                                  "values": list(data[field.name])})
                 raw_lengths.append(len(data[field.name]))
         else:
-            if schema.auto_id:
-                if len(data) + 1 != len(fields):
-                    raise DataNotMatchException(0, ExceptionsMessage.FieldsNumInconsistent)
+            if schema.auto_id and len(data) + 1 != len(fields):
+                raise DataNotMatchException(0, ExceptionsMessage.FieldsNumInconsistent)
 
             tmp_fields = copy.deepcopy(fields)
             for i, field in enumerate(tmp_fields):

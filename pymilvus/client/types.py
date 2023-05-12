@@ -43,7 +43,7 @@ class Status:
     def __repr__(self):
         attr_list = ['%s=%r' % (key, value)
                      for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(attr_list))
+        return f"{self.__class__.__name__}({', '.join(attr_list)})"
 
     def __eq__(self, other):
         """
@@ -105,7 +105,7 @@ class IndexType(IntEnum):
     IVF_SQ8_H = IVF_SQ8H
 
     def __repr__(self):
-        return "<{}: {}>".format(self.__class__.__name__, self._name_)
+        return f"<{self.__class__.__name__}: {self._name_}>"
 
     def __str__(self):
         return self._name_
@@ -124,7 +124,7 @@ class MetricType(IntEnum):
     SUPERSTRUCTURE = 7
 
     def __repr__(self):
-        return "<{}: {}>".format(self.__class__.__name__, self._name_)
+        return f"<{self.__class__.__name__}: {self._name_}>"
 
     def __str__(self):
         return self._name_

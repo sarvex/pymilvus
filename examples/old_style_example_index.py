@@ -12,6 +12,7 @@ pymilvus
 
 This example is runable for Milvus(0.11.x) and pymilvus(0.3.x).
 """
+
 import random
 import csv
 from pprint import pprint
@@ -60,7 +61,7 @@ embeddings = []  # embeddings
 films = []
 with open('films.csv', 'r') as csvfile:
     reader = csv.reader(csvfile)
-    films = [film for film in reader]
+    films = list(reader)
 
 for film in films:
     ids.append(int(film[0]))
@@ -85,7 +86,9 @@ ids = client.insert(collection_name, hybrid_entities)
 
 client.flush([collection_name])
 after_flush_counts = client.get_collection_stats(collection_name)
-print(" > There are {} films in collection `{}` after flush".format(after_flush_counts, collection_name))
+print(
+    f" > There are {after_flush_counts} films in collection `{collection_name}` after flush"
+)
 
 
 # ------

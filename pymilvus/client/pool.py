@@ -40,10 +40,7 @@ class Duration:
 
     @property
     def value(self):
-        if not self.end_ts:
-            return None
-
-        return self.end_ts - self.start_ts
+        return None if not self.end_ts else self.end_ts - self.start_ts
 
 
 class ConnectionRecord:
@@ -68,7 +65,7 @@ class ConnectionRecord:
     def _register_link(self):
         with RegistryHandler(uri=self._uri, pre_ping=self._pre_ping, conn_id=self._conn_id, **self._kw) as register:
             ip, port = register.register_link()
-            self._uri = "tcp://{}:{}".format(ip, port)
+            self._uri = f"tcp://{ip}:{port}"
 
     def connection(self):
         ''' Return a available connection. If connection is out-of-date,
@@ -109,12 +106,11 @@ class ConnectionPool:
 
             status, version = conn.client().server_version(timeout=30)
             if not status.OK():
-                raise NotConnectError("Cannot check server version: {}".format(status.message))
+                raise NotConnectError(f"Cannot check server version: {status.message}")
             if not _is_version_match(version):
                 raise VersionError(
-                    "Version of python SDK(v{}) not match that of server v{}, excepted is v{}".format(__version__,
-                                                                                                  version,
-                                                                                                  support_versions))
+                    f"Version of python SDK(v{__version__}) not match that of server v{version}, excepted is v{support_versions}"
+                )
         conn.close()
 
     def _inc_used(self):
@@ -192,10 +188,7 @@ class ConnectionPool:
             if block:
                 raise ConnectionPoolError("Connection pool is full.")
 
-        if self._full():
-            return self.fetch(block=True)
-
-        return self._inc_connection()
+        return self.fetch(block=True) if self._full() else self._inc_connection()
 
     def release(self, conn):
         try:
@@ -276,12 +269,11 @@ class SingleConnectionPool:
 
             status, version = self._conn.client().server_version(timeout=30)
             if not status.OK():
-                raise NotConnectError("Cannot check server version: {}".format(status.message))
+                raise NotConnectError(f"Cannot check server version: {status.message}")
             if not _is_version_match(version):
                 raise VersionError(
-                    "Version of python SDK({}) not match that of server{}, excepted is {}".format(__version__,
-                                                                                                  version,
-                                                                                                  support_versions))
+                    f"Version of python SDK({__version__}) not match that of server{version}, excepted is {support_versions}"
+                )
 
     def record_duration(self, conn, duration):
         pass

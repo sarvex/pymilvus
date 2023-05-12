@@ -45,7 +45,10 @@ def retry_on_rpc_failure(retry_times=10, wait=1, retry_on_deadline=True):
                     # DEADLINE_EXCEEDED means that the task wat not completed
                     # UNAVAILABLE means that the service is not reachable currently
                     # Reference: https://grpc.github.io/grpc/python/grpc.html#grpc-status-code
-                    if e.code() != grpc.StatusCode.DEADLINE_EXCEEDED and e.code() != grpc.StatusCode.UNAVAILABLE:
+                    if e.code() not in [
+                        grpc.StatusCode.DEADLINE_EXCEEDED,
+                        grpc.StatusCode.UNAVAILABLE,
+                    ]:
                         raise e
                     if not retry_on_deadline and e.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
                         raise e
@@ -66,12 +69,19 @@ def retry_on_rpc_failure(retry_times=10, wait=1, retry_on_deadline=True):
 
 
 def _pool_args(**kwargs):
-    pool_kwargs = dict()
-    for k, v in kwargs.items():
-        if k in ("pool_size", "wait_timeout", "handler", "try_connect", "pre_ping", "max_retry"):
-            pool_kwargs[k] = v
-
-    return pool_kwargs
+    return {
+        k: v
+        for k, v in kwargs.items()
+        if k
+        in (
+            "pool_size",
+            "wait_timeout",
+            "handler",
+            "try_connect",
+            "pre_ping",
+            "max_retry",
+        )
+    }
 
 
 def _set_uri(host, port, uri, handler="GRPC"):
@@ -88,16 +98,16 @@ def _set_uri(host, port, uri, handler="GRPC"):
             _host = _uri.hostname
             _port = _uri.port
         except (AttributeError, ValueError, TypeError) as e:
-            raise ParamError("uri is illegal: {}".format(e))
+            raise ParamError(f"uri is illegal: {e}")
     else:
         raise ParamError("Param is not complete. Please invoke as follow:\n"
                          "\t(host = ${HOST}, port = ${PORT})\n"
                          "\t(uri = ${URI})\n")
 
     if not is_legal_host(_host) or not is_legal_port(_port):
-        raise ParamError("host {} or port {} is illegal".format(_host, _port))
+        raise ParamError(f"host {_host} or port {_port} is illegal")
 
-    return "{}{}:{}".format(uri_prefix, str(_host), str(_port))
+    return f"{uri_prefix}{str(_host)}:{str(_port)}"
 
 
 class Milvus:
@@ -164,7 +174,7 @@ class Milvus:
         elif self._pool_type == "Singleton":
             self._pool = SingleConnectionPool(self._pool_uri, **self._pool_kwargs)
         else:
-            raise ParamError("Unknown pool value: {}".format(self._pool_type))
+            raise ParamError(f"Unknown pool value: {self._pool_type}")
 
         if not channel:
             self._wait_for_healthy()
@@ -795,7 +805,7 @@ class Milvus:
             ParamError: If parameters are invalid
             BaseException: If the return result from server is not ok
         """
-        params = params or dict()
+        params = params or {}
         if not isinstance(params, dict):
             raise ParamError("Params must be a dictionary type")
         # params preliminary validate
@@ -812,20 +822,21 @@ class Milvus:
                              ", which must be one of: " + str(valid_index_types))
         for k in params['params'].keys():
             if k not in valid_index_params_keys:
-                raise ParamError("Invalid params['params'].key: " + k)
+                raise ParamError(f"Invalid params['params'].key: {k}")
         for v in params['params'].values():
             if not isinstance(v, int):
-                raise ParamError("Invalid params['params'].value: " + v + ", which must be an integer")
+                raise ParamError(
+                    f"Invalid params['params'].value: {v}, which must be an integer"
+                )
 
         # filter invalid metric type
         if params['index_type'] in valid_binary_index_types:
             if not is_legal_binary_index_metric_type(params['index_type'], params['metric_type']):
                 raise ParamError("Invalid metric_type: " + params['metric_type'] +
                                  ", which does not match the index type: " + params['index_type'])
-        else:
-            if not is_legal_index_metric_type(params['index_type'], params['metric_type']):
-                raise ParamError("Invalid metric_type: " + params['metric_type'] +
-                                 ", which does not match the index type: " + params['index_type'])
+        elif not is_legal_index_metric_type(params['index_type'], params['metric_type']):
+            raise ParamError("Invalid metric_type: " + params['metric_type'] +
+                             ", which does not match the index type: " + params['index_type'])
         with self._connection() as handler:
             return handler.create_index(collection_name, field_name, params, timeout, **kwargs)
 

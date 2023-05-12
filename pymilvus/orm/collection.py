@@ -46,17 +46,18 @@ def _check_schema(schema):
         raise SchemaNotReadyException(0, ExceptionsMessage.NoSchema)
     if len(schema.fields) < 1:
         raise SchemaNotReadyException(0, ExceptionsMessage.EmptySchema)
-    vector_fields = []
-    for field in schema.fields:
-        if field.dtype == DataType.FLOAT_VECTOR or field.dtype == DataType.BINARY_VECTOR:
-            vector_fields.append(field.name)
-    if len(vector_fields) < 1:
+    vector_fields = [
+        field.name
+        for field in schema.fields
+        if field.dtype in [DataType.FLOAT_VECTOR, DataType.BINARY_VECTOR]
+    ]
+    if not vector_fields:
         raise SchemaNotReadyException(0, ExceptionsMessage.NoVector)
 
 
 def _check_data_schema(fields, data):
     if isinstance(data, pandas.DataFrame):
-        for i, field in enumerate(fields):
+        for field in fields:
             for j, _ in enumerate(data[field.name]):
                 tmp_type = infer_dtype_bydata(data[field.name].iloc[j])
                 if tmp_type != field.dtype:
@@ -118,8 +119,7 @@ class Collection:
         self._shards_num = shards_num
         self._kwargs = kwargs
         conn = self._get_connection()
-        has = conn.has_collection(self._name)
-        if has:
+        if has := conn.has_collection(self._name):
             resp = conn.describe_collection(self._name)
             server_schema = CollectionSchema.construct_from_dict(resp)
             if schema is None:
@@ -161,12 +161,14 @@ class Collection:
         """
         if self._schema is None:
             return False
-        if self._schema.auto_id:
-            if isinstance(data, pandas.DataFrame):
-                if self._schema.primary_field.name in data:
-                    if not data[self._schema.primary_field.name].isnull().all():
-                        raise DataNotMatchException(0, ExceptionsMessage.AutoIDWithData)
-                    data = data.drop(self._schema.primary_field.name, axis=1)
+        if (
+            self._schema.auto_id
+            and isinstance(data, pandas.DataFrame)
+            and self._schema.primary_field.name in data
+        ):
+            if not data[self._schema.primary_field.name].isnull().all():
+                raise DataNotMatchException(0, ExceptionsMessage.AutoIDWithData)
+            data = data.drop(self._schema.primary_field.name, axis=1)
 
         infer_fields = parse_fields_from_data(data)
         tmp_fields = copy.deepcopy(self._schema.fields)
@@ -183,10 +185,9 @@ class Collection:
         for x, y in zip(infer_fields, tmp_fields):
             if x.dtype != y.dtype:
                 return False
-            if isinstance(data, pandas.DataFrame):
-                if x.name != y.name:
-                    return False
-            # todo check dim
+            if isinstance(data, pandas.DataFrame) and x.name != y.name:
+                return False
+                # todo check dim
         return True
 
     def _check_schema(self):
@@ -195,7 +196,7 @@ class Collection:
 
     def _get_vector_field(self) -> str:
         for field in self._schema.fields:
-            if field.dtype == DataType.FLOAT_VECTOR or field.dtype == DataType.BINARY_VECTOR:
+            if field.dtype in [DataType.FLOAT_VECTOR, DataType.BINARY_VECTOR]:
                 return field.name
         raise SchemaNotReadyException(0, ExceptionsMessage.NoVector)
 
@@ -214,9 +215,10 @@ class Collection:
                 pk_index = i
         if pk_index == -1:
             raise SchemaNotReadyException(0, ExceptionsMessage.PrimaryKeyNotExist)
-        if "auto_id" in kwargs:
-            if not isinstance(kwargs.get("auto_id", None), bool):
-                raise AutoIDException(0, ExceptionsMessage.AutoIDType)
+        if "auto_id" in kwargs and not isinstance(
+            kwargs.get("auto_id", None), bool
+        ):
+            raise AutoIDException(0, ExceptionsMessage.AutoIDType)
         auto_id = kwargs.pop("auto_id", False)
         if auto_id:
             if dataframe[primary_field].isnull().all():
@@ -669,9 +671,7 @@ class Collection:
         conn = self._get_connection()
         res = conn.search_with_expression(self._name, data, anns_field, param, limit, expr,
                                           partition_names, output_fields, timeout, round_decimal, **kwargs)
-        if kwargs.get("_async", False):
-            return SearchFuture(res)
-        return SearchResult(res)
+        return SearchFuture(res) if kwargs.get("_async", False) else SearchResult(res)
 
     def query(self, expr, output_fields=None, partition_names=None, timeout=None):
         """
@@ -731,8 +731,7 @@ class Collection:
             raise DataTypeNotMatchException(0, ExceptionsMessage.ExprType % type(expr))
 
         conn = self._get_connection()
-        res = conn.query(self._name, expr, output_fields, partition_names, timeout)
-        return res
+        return conn.query(self._name, expr, output_fields, partition_names, timeout)
 
     @property
     def partitions(self) -> list:
@@ -758,10 +757,10 @@ class Collection:
         """
         conn = self._get_connection()
         partition_strs = conn.list_partitions(self._name)
-        partitions = []
-        for partition in partition_strs:
-            partitions.append(Partition(self, partition, construct_only=True))
-        return partitions
+        return [
+            Partition(self, partition, construct_only=True)
+            for partition in partition_strs
+        ]
 
     def partition(self, partition_name) -> Partition:
         """
@@ -1055,9 +1054,7 @@ class Collection:
         """
         conn = self._get_connection()
         # TODO(yukun): Need field name, but provide index name
-        if conn.describe_index(self._name, "", timeout=timeout) is None:
-            return False
-        return True
+        return conn.describe_index(self._name, "", timeout=timeout) is not None
 
     def drop_index(self, timeout=None, **kwargs):
         """

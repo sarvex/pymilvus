@@ -17,11 +17,10 @@ class TestConnections:
 
     @pytest.fixture(scope="function")
     def configure_params(self):
-        params = {
+        return {
             "test": {"host": "localhost", "port": "19530"},
             "dev": {"host": "127.0.0.1", "port": "19530"},
         }
-        return params
 
     @pytest.fixture(scope="function")
     def host(self):
@@ -33,11 +32,10 @@ class TestConnections:
 
     @pytest.fixture(scope="function")
     def params(self, host, port):
-        d = {
+        return {
             "host": host,
             "port": port,
         }
-        return d
 
     def test_constructor(self, c):
         LOGGER.info(type(c))
@@ -47,7 +45,7 @@ class TestConnections:
 
     @pytest.fixture(scope="function")
     def invalid_params(self):
-        params = {
+        return {
             "invalid1": {"port": "19530"},
             "invalid2": {"host": bytes("127.0.0.1", "utf-8"), "port": "19530"},
             "invalid3": {"host": 0, "port": "19530"},
@@ -56,7 +54,6 @@ class TestConnections:
             "invalid6": {"host": "{}", "port": "19530"},
             "invalid7": {"host": "[a, b, c]", "port": "19530"},
         }
-        return params
 
     def test_invalid_params_connect(self, c, invalid_params):
         with pytest.raises(Exception):
