@@ -4,7 +4,7 @@ chardet==4.0.0
 grpcio==1.37.1
 grpcio-testing==1.37.1
 grpcio-tools==1.37.1
-idna==2.10
+idna==3.7
 mmh3==3.0.0
 packaging==20.9
 pep517==0.10.0
