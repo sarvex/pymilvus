@@ -10,7 +10,7 @@ packaging==20.9
 pep517==0.10.0
 protobuf==3.17.1
 pyparsing==2.4.7
-requests==2.25.1
+requests==2.32.0
 six==1.16.0
 toml==0.10.2
 ujson==4.0.2
